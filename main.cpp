@@ -4,54 +4,71 @@
 #include <map>
 #include <functional>
 #include <unordered_map>
+#include <memory>
+
+class WrapperBase {
+public:
+    virtual ~WrapperBase() = default;
+
+    virtual int execute(const std::vector<int> &args) const = 0;
+};
+
+template<class Class, class... Args>
+class WrapperTemp : public WrapperBase {
+public:
+    WrapperTemp(Class *object, int (Class::* method)(Args...)) : object(object), method(method) {}
+
+    int execute(const std::vector<int> &args) const override {
+        return callFunc(object, method, args, std::index_sequence_for<Args...>());
+    }
+
+private:
+    template<size_t... Is>
+    int callFunc(Class *object, int (Class::* method)(Args...), const std::vector<int> &args,
+                 std::index_sequence<Is...>) const {
+        return (object->*method)(args[Is]...);
+    }
+
+    Class *object;
+
+    int (Class::* method)(Args...);
+};
+
+using WrapperPtr = std::unique_ptr<WrapperBase>;
 
 class Wrapper {
-private:
-    using Function = std::function<int(int, int)>;
-
-    Function m_function;
-    std::unordered_map<std::string, int*> m_args;
-
 public:
-    Wrapper(int* arg1, int* arg2): m_args{{"arg1", arg1}, {"arg2", arg2}} {}
+    template<class Class, class... Args>
+    Wrapper(Class *object, int (Class::* method)(Args...), const std::vector<std::pair<std::string, int>> &args)
+            : pImpl(std::make_unique<WrapperTemp<Class, Args...>>(object, method)),
+              argumentOrder(args.begin(), args.end()) {}
 
-    void setFunction(Function function) {
-        m_function = function;
-    }
-
-    int execute() {
-        int arg1 = *(m_args["arg1"]);
-        int arg2 = *(m_args["arg2"]);
-        return m_function(arg1, arg2);
-    }
-
-    int* getArgument(const std::string& argName) {
-        return m_args[argName];
-    }
+private:
+    WrapperPtr pImpl;
+    std::vector<std::pair<std::string, int>> argumentOrder;
 };
 
 class Engine {
 private:
-    std::unordered_map<std::string, Wrapper*> m_commands;
+    std::unordered_map<std::string, Wrapper *> commands;
 
 public:
-    void registerCommand(Wrapper* wrapper, const std::string& commandName) {
-        m_commands[commandName] = wrapper;
+    void register_command(std::string name, Wrapper *wrapper) {
+        commands.insert({name, wrapper});
     }
 
-    int execute(const std::string& commandName, const std::unordered_map<std::string, int>& args) {
-        Wrapper* wrapper = m_commands[commandName];
-        for (const auto& arg : args) {
-            *(wrapper->getArgument(arg.first)) = arg.second;
-        }
-        return wrapper->execute();
-    }
+    int execute(std::string name, const std::unordered_map<std::string, int> &args);
 };
+
 
 class Subject {
 public:
-    int f3(int arg1, int arg2) {
-        return arg1 + arg2;
+    int sum(int x, int y) {
+        return x + y;
+    }
+
+    int dif(int x, int y) {
+        return x - y;
     }
 };
 
@@ -60,33 +77,21 @@ int main() {
     int arg1 = 0;
     int arg2 = 0;
 
-    Wrapper wrappwer(&arg1, &arg2);
-    wrappwer.setFunction(std::bind(&Subject::f3, &subj, std::placeholders::_1, std::placeholders::_2));
+    Wrapper wrapper1(&subj, &Subject::sum, {{"arg1", 0},
+                                            {"arg2", 0}});
+    Wrapper wrapper2(&subj, &Subject::dif, {{"arg1", 0},
+                                            {"arg2", 0}});
 
     Engine engine;
-    engine.registerCommand(&wrappwer, "command1");
 
-    std::unordered_map<std::string, int> args{{"arg1", 4}, {"arg2", 5}};
+    engine.register_command("command1", &wrapper1);
+
+    std::unordered_map<std::string, int> args{{"arg1", 4},
+                                              {"arg2", 5}};
     std::cout << engine.execute("command1", args) << std::endl;
 
     return 0;
 }
-
-
-/*/
-int main() {
-    std::cout << "Hello, World!" << std::endl;
-
-//    Wrapper wrappwer(&subj, &subject::f3, {{"arg1", 0}, {"arg2", 0}});
-//    Engine engine;
-//    engine.register_command(&wrapper, "command1");
-//    std::cout << engine.execte("command1", {{"arg1", 4}, {"arg2", 5}}) << std::endl;
-//
-
-    return 0;
-}
-/*/
-
 
 /*/
 
