@@ -66,10 +66,6 @@ public:
     int sum(int x, int y) {
         return x + y;
     }
-
-    int dif(int x, int y) {
-        return x - y;
-    }
 };
 
 int main() {
@@ -77,10 +73,7 @@ int main() {
     int arg1 = 0;
     int arg2 = 0;
 
-    Wrapper wrapper1(&subj, &Subject::sum, {{"arg1", 0},
-                                            {"arg2", 0}});
-    Wrapper wrapper2(&subj, &Subject::dif, {{"arg1", 0},
-                                            {"arg2", 0}});
+    Wrapper wrapper1(&subj, &Subject::sum, {{"arg1", 0}, {"arg2", 0}});
 
     Engine engine;
 
