@@ -1,10 +1,7 @@
-#ifndef WRAPPER_ENGINE_H
-#define WRAPPER_ENGINE_H
 #pragma once
-
 #include <unordered_map>
 #include <string>
-#include "wrapper_classes.h"  // Include the header file where Wrapper is defined
+#include "wrapper_classes.h"
 
 class Engine {
 private:
@@ -16,5 +13,3 @@ public:
     int execute(std::string name, const std::unordered_map<std::string, int> &args);
 };
 
-
-#endif //WRAPPER_ENGINE_H

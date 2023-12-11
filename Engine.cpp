@@ -1,7 +1,3 @@
-//
-// Created by Misha on 11.12.2023.
-//
-
 #include "Engine.h"
 
 void Engine::register_command(std::string name, Wrapper *wrapper) {
@@ -12,7 +8,7 @@ int Engine::execute(std::string name, const std::unordered_map<std::string, int>
     auto command = commands.find(name);
     if (command == commands.end()) {
         std::string errMsg = "Command " + name + " not found";
-        throw std::exception(errMsg.c_str());
+        throw std::runtime_error(errMsg);
     }
     return command->second->execute(args);
 }

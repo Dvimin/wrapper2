@@ -42,6 +42,15 @@ public:
             : pImpl(std::make_unique<WrapperTemp<Class, Args...>>(object, method)),
               argumentOrder(args.begin(), args.end()) {}
 
+    int execute(const std::unordered_map<std::string, int> &args) {
+        std::vector<int> finalArgs;
+        for (const auto &arg : argumentOrder) {
+            auto it = args.find(arg.first);
+            finalArgs.push_back(it != args.end() ? it->second : arg.second);
+        }
+        return pImpl->execute(finalArgs);
+    }
+
 private:
     WrapperPtr pImpl;
     std::vector<std::pair<std::string, int>> argumentOrder;
