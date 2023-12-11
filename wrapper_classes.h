@@ -1,58 +1,63 @@
 #pragma once
-#include <iostream>
+
 #include <string>
 #include <vector>
-#include <map>
-#include <functional>
 #include <unordered_map>
+#include <functional>
 #include <memory>
 
 class WrapperBase {
 public:
-    virtual ~WrapperBase() = default;
-    virtual int execute(const std::vector<int> &args) const = 0;
+    virtual int execute(const std::vector<int> &) = 0;
 };
 
-template <class Class, class... Args>
+template<class Class, class... Args>
 class WrapperTemp : public WrapperBase {
-public:
-    WrapperTemp(Class *object, int (Class::* method)(Args...)) : object(object), method(method) {}
-
-    int execute(const std::vector<int> &args) const override {
-        return callFunc(object, method, args, std::index_sequence_for<Args...>());
-    }
+    friend class Wrapper;
 
 private:
-    template <size_t... Is>
-    int callFunc(Class *object, int (Class::* method)(Args...), const std::vector<int> &args,
-                 std::index_sequence<Is...>) const {
-        return (object->*method)(args[Is]...);
+    Class *obj;
+
+    int (Class::* method)(Args...);
+
+    WrapperTemp(Class *obj, int (Class::* method)(Args...)) : obj(obj), method(method) {}
+
+    template<size_t... I>
+    int callHelper(const std::vector<int> &args, std::index_sequence<I...>) {
+        return (obj->*method)(args[I]...);
     }
 
-    Class *object;
-    int (Class::* method)(Args...);
+    int execute(const std::vector<int> &args) override {
+        return callHelper(args, std::make_index_sequence<sizeof...(Args)>{});
+    }
 };
 
-using WrapperPtr = std::unique_ptr<WrapperBase>;
 
 class Wrapper {
 public:
-    template <class Class, class... Args>
-    Wrapper(Class *object, int (Class::* method)(Args...), const std::vector<std::pair<std::string, int>> &args)
-            : pImpl(std::make_unique<WrapperTemp<Class, Args...>>(object, method)),
-              argumentOrder(args.begin(), args.end()) {}
+    template<class Class, class... Args>
+    Wrapper(Class *obj, int (Class::* method)(Args...), const std::vector<std::pair<std::string, int>> &args)
+            : pImpl(std::make_unique<WrapperTemp<Class, Args... >>(WrapperTemp<Class, Args...>(obj, method))) {
+
+        argsOrder.reserve(args.size());
+        defaultVals.reserve(args.size());
+        for (auto &arg: args) {
+            argsOrder.push_back(arg.first);
+            defaultVals.insert(arg);
+        }
+    }
 
     int execute(const std::unordered_map<std::string, int> &args) {
-        std::vector<int> finalArgs;
-        for (const auto &arg : argumentOrder) {
-            auto it = args.find(arg.first);
-            finalArgs.push_back(it != args.end() ? it->second : arg.second);
+        std::vector<int> final_args;
+        for (auto &arg_name: argsOrder) {
+            auto i = args.find(arg_name);
+            final_args.push_back(i != args.end() ? i->second : defaultVals.find(arg_name)->second);
         }
-        return pImpl->execute(finalArgs);
+        return pImpl->execute(final_args);
     }
 
 private:
-    WrapperPtr pImpl;
-    std::vector<std::pair<std::string, int>> argumentOrder;
+    std::unique_ptr<WrapperBase> pImpl;
+    std::vector<std::string> argsOrder;
+    std::unordered_map<std::string, int> defaultVals;
 };
-

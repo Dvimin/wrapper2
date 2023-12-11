@@ -1,4 +1,5 @@
 #include "Engine.h"
+#include <stdexcept>
 
 void Engine::register_command(std::string name, Wrapper *wrapper) {
     commands.insert({name, wrapper});
