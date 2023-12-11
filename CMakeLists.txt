@@ -3,4 +3,4 @@ project(wrapper)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(wrapper main.cpp)
+add_executable(wrapper main.cpp Engine.cpp wrapper_classes.h)
